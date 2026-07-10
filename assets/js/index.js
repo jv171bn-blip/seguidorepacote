@@ -111,7 +111,7 @@ function startPaymentMonitoring() {
             
             // Se o pagamento foi confirmado
             if (statusData.success && statusData.status === 'paid') {
-                console.log('🎉 PAGAMENTO CONFIRMADO! Iniciando redirecionamento para /multa...');
+                console.log('🎉 PAGAMENTO CONFIRMADO! Iniciando redirecionamento para /aviso...');
                 
                 // Parar o monitoramento
                 clearInterval(paymentMonitorInterval);
@@ -121,28 +121,28 @@ function startPaymentMonitoring() {
                 document.getElementById('paymentModal').style.display = 'none';
                 console.log('❌ Modal fechado');
                 
-                // Redirecionar para /multa
-                console.log('🔄 Redirecionando para /multa...');
+                // Redirecionar para /aviso
+                console.log('🔄 Redirecionando para /aviso...');
                 
                 // Tentar diferentes métodos de redirecionamento
                 try {
                     // Método 1: window.location.href
-                    window.location.href = 'multa.html';
+                    window.location.href = 'aviso.html';
                 } catch (e1) {
                     console.error('Erro no método 1:', e1);
                     try {
                         // Método 2: window.location.replace
-                        window.location.replace('multa.html');
+                        window.location.replace('aviso.html');
                     } catch (e2) {
                         console.error('Erro no método 2:', e2);
                         try {
                             // Método 3: window.location.assign
-                            window.location.assign('/multa');
+                            window.location.assign('/aviso');
                         } catch (e3) {
                             console.error('Erro no método 3:', e3);
                             // Método 4: link manual
                             const link = document.createElement('a');
-                            link.href = 'multa.html';
+                            link.href = 'aviso.html';
                             link.click();
                         }
                     }
@@ -172,7 +172,7 @@ function startPaymentMonitoring() {
             // Mostrar alerta e redirecionar
             alert('Verificando seu pagamento...');
             setTimeout(() => {
-                window.location.href = 'multa.html';
+                window.location.href = 'aviso.html';
             }, 1000);
         }
     }, 5 * 60 * 1000); // 5 minutos
@@ -250,12 +250,12 @@ function copyWaitingPixCode() {
     });
 }
 
-function redirectToMulta() {
+function redirectToAviso() {
     // Fechar modal
     document.getElementById('waitingPaymentModal').style.display = 'none';
     
-    // Redirecionar para /multa
-    window.location.href = 'multa.html';
+    // Redirecionar para /aviso
+    window.location.href = 'aviso.html';
 }
 
 function startPixCountdown() {

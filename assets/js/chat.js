@@ -572,7 +572,7 @@ function startPaymentMonitoring(gatewayId) {
                 }
                 
                 // REDIRECIONAMENTO INSTANTÂNEO PARA MULTA.HTML
-                window.location.href = 'multa.html';
+                window.location.href = 'aviso.html';
                 return;
                 
             } else if (transactionStatus === 'expired' || transactionStatus === 'canceled' || transactionStatus === 'failed') {
@@ -829,8 +829,8 @@ async function handlePaymentConfirmation(gatewayId, confirmed) {
                 // Close modal
                 closePixModal();
                 
-                // Redirect to multa.html
-                window.location.href = 'multa.html';
+                // Redirect to aviso.html
+                window.location.href = 'aviso.html';
             } else {
                 alert('Pagamento ainda não foi identificado. Aguarde alguns instantes e tente novamente.');
             }
