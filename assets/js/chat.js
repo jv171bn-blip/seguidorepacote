@@ -176,39 +176,57 @@ function handleOptionClick(button, responseText, nextAction) {
     if (productConfig[nextAction]) {
         localStorage.setItem('selectedProduct', JSON.stringify(productConfig[nextAction]));
         
-        // Fire Initiate Checkout event when an offer is selected
+        // Fire Initiate Checkout event when an offer is selected (only once per product to prevent duplicates)
         const product = productConfig[nextAction];
         const value = (product.amount / 100).toFixed(2);
+        const sessionKey = `initiate_checkout_${product.productHash}`;
         
-        // UTMify Initiate Checkout event
-        if (typeof window.utmify !== 'undefined') {
-            window.utmify.track('Initiate Checkout', {
-                currency: 'BRL',
-                value: value,
-                items: [{
-                    id: product.productHash,
-                    name: product.productTitle,
-                    price: value,
-                    quantity: 1
-                }]
+        // Check if we've already fired this event for this product in this session
+        if (!sessionStorage.getItem(sessionKey)) {
+            sessionStorage.setItem(sessionKey, 'true'); // Mark as fired
+            
+            // Meta Pixel InitiateCheckout event
+            if (typeof window.fbq !== 'undefined') {
+                window.fbq('track', 'InitiateCheckout', {
+                    currency: 'BRL',
+                    value: value,
+                    content_ids: [product.productHash],
+                    content_name: product.productTitle,
+                    content_type: 'product',
+                    num_items: 1
+                });
+            }
+            
+            // UTMify Initiate Checkout event (preserve existing)
+            if (typeof window.utmify !== 'undefined') {
+                window.utmify.track('Initiate Checkout', {
+                    currency: 'BRL',
+                    value: value,
+                    items: [{
+                        id: product.productHash,
+                        name: product.productTitle,
+                        price: value,
+                        quantity: 1
+                    }]
+                });
+            }
+            
+            // Push to dataLayer (preserve existing)
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                event: 'initiate_checkout',
+                ecommerce: {
+                    currency: 'BRL',
+                    value: value,
+                    items: [{
+                        item_id: product.productHash,
+                        item_name: product.productTitle,
+                        price: value,
+                        quantity: 1
+                    }]
+                }
             });
         }
-        
-        // Push to dataLayer for GA4/Meta Pixel compatibility
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({
-            event: 'initiate_checkout',
-            ecommerce: {
-                currency: 'BRL',
-                value: value,
-                items: [{
-                    item_id: product.productHash,
-                    item_name: product.productTitle,
-                    price: value,
-                    quantity: 1
-                }]
-            }
-        });
     }
 
     // Show typing and continue conversation
@@ -314,46 +332,13 @@ const TRIBOPAY_BASE_URL = 'https://api.tribopay.com.br/api/public/v1';
 
 // PIX Modal functionality
 async function openPixModal() {
-    // Fire Initiate Checkout event
-    const selectedProduct = JSON.parse(localStorage.getItem('selectedProduct') || '{"amount": 5748, "offerHash": "seguidores847293", "productHash": "seguidores847293", "productTitle": "Pacote de Seguidores"}');
-    const value = (selectedProduct.amount / 100).toFixed(2);
-    
-    // UTMify Initiate Checkout event (if available)
-    if (typeof window.utmify !== 'undefined') {
-        window.utmify.track('Initiate Checkout', {
-            currency: 'BRL',
-            value: value,
-            items: [{
-                id: selectedProduct.productHash,
-                name: selectedProduct.productTitle,
-                price: value,
-                quantity: 1
-            }]
-        });
-    }
-    
-    // Also push to dataLayer for compatibility with other tools (GA4, Meta Pixel, etc.)
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({
-        event: 'initiate_checkout',
-        ecommerce: {
-            currency: 'BRL',
-            value: value,
-            items: [{
-                item_id: selectedProduct.productHash,
-                item_name: selectedProduct.productTitle,
-                price: value,
-                quantity: 1
-            }]
-        }
-    });
-    
     // Show loading modal first
     showLoadingModal();
     
     try {
-        // Get customer data and URL params from localStorage
+        // Get customer data, selected product, and URL params from localStorage
         const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
+        const selectedProduct = JSON.parse(localStorage.getItem('selectedProduct') || '{"amount": 5748, "offerHash": "seguidores847293", "productHash": "seguidores847293", "productTitle": "Pacote de Seguidores"}');
         const params = getUrlParams();
         
         // Generate fake contact info
