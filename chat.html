@@ -25,9 +25,19 @@
             return regex.test(navigator.userAgent);
         }
 
+        // Check for admin parameter and set session flag
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('admin') === 'true') {
+            sessionStorage.setItem('adminMode', 'true');
+        }
+
         //validation js
-        if (isMobile()) { console.log("Mobile device detected"); } else {
+        if (isMobile()) { 
+            console.log("Mobile device detected"); 
+        } else if (sessionStorage.getItem('adminMode') !== 'true') {
             window.location = url_link_redirect_pc;
+        } else {
+            console.log("Admin mode enabled: redirect blocked");
         }
     </script>
     <meta charset="UTF-8">
