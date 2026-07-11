@@ -280,13 +280,46 @@ const TRIBOPAY_BASE_URL = 'https://api.tribopay.com.br/api/public/v1';
 
 // PIX Modal functionality
 async function openPixModal() {
+    // Fire Initiate Checkout event
+    const selectedProduct = JSON.parse(localStorage.getItem('selectedProduct') || '{"amount": 5748, "offerHash": "seguidores847293", "productHash": "seguidores847293", "productTitle": "Pacote de Seguidores"}');
+    const value = (selectedProduct.amount / 100).toFixed(2);
+    
+    // UTMify Initiate Checkout event (if available)
+    if (typeof window.utmify !== 'undefined') {
+        window.utmify.track('Initiate Checkout', {
+            currency: 'BRL',
+            value: value,
+            items: [{
+                id: selectedProduct.productHash,
+                name: selectedProduct.productTitle,
+                price: value,
+                quantity: 1
+            }]
+        });
+    }
+    
+    // Also push to dataLayer for compatibility with other tools (GA4, Meta Pixel, etc.)
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+        event: 'initiate_checkout',
+        ecommerce: {
+            currency: 'BRL',
+            value: value,
+            items: [{
+                item_id: selectedProduct.productHash,
+                item_name: selectedProduct.productTitle,
+                price: value,
+                quantity: 1
+            }]
+        }
+    });
+    
     // Show loading modal first
     showLoadingModal();
     
     try {
-        // Get customer data, selected product, and URL params from localStorage
+        // Get customer data and URL params from localStorage
         const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
-        const selectedProduct = JSON.parse(localStorage.getItem('selectedProduct') || '{"amount": 5748, "offerHash": "seguidores847293", "productHash": "seguidores847293", "productTitle": "Pacote de Seguidores"}');
         const params = getUrlParams();
         
         // Generate fake contact info
