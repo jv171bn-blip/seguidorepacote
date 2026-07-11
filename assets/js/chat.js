@@ -175,6 +175,40 @@ function handleOptionClick(button, responseText, nextAction) {
     // Save selected product to localStorage if available
     if (productConfig[nextAction]) {
         localStorage.setItem('selectedProduct', JSON.stringify(productConfig[nextAction]));
+        
+        // Fire Initiate Checkout event when an offer is selected
+        const product = productConfig[nextAction];
+        const value = (product.amount / 100).toFixed(2);
+        
+        // UTMify Initiate Checkout event
+        if (typeof window.utmify !== 'undefined') {
+            window.utmify.track('Initiate Checkout', {
+                currency: 'BRL',
+                value: value,
+                items: [{
+                    id: product.productHash,
+                    name: product.productTitle,
+                    price: value,
+                    quantity: 1
+                }]
+            });
+        }
+        
+        // Push to dataLayer for GA4/Meta Pixel compatibility
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+            event: 'initiate_checkout',
+            ecommerce: {
+                currency: 'BRL',
+                value: value,
+                items: [{
+                    item_id: product.productHash,
+                    item_name: product.productTitle,
+                    price: value,
+                    quantity: 1
+                }]
+            }
+        });
     }
 
     // Show typing and continue conversation
