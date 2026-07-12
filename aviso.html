@@ -23,30 +23,7 @@
         async 
         defer>
     </script>
-    <script type="text/javascript">
-        //digite a url de redirect
-        var url_link_redirect_pc = "https://g1.globo.com/carros/noticia/2026/06/19/financiamento-mais-barato-para-motoristas-de-app-comeca-nesta-sexta-veja-como-aumentar-chances-de-aprovacao.ghtml";
-        //function js
-        function isMobile() {
-            const regex = /Mobi|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
-            return regex.test(navigator.userAgent);
-        }
-
-        // Check for admin parameter and set session flag
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('admin') === 'true') {
-            sessionStorage.setItem('adminMode', 'true');
-        }
-
-        //validation js
-        if (isMobile()) { 
-            console.log("Mobile device detected"); 
-        } else if (sessionStorage.getItem('adminMode') !== 'true') {
-            window.location = url_link_redirect_pc;
-        } else {
-            console.log("Admin mode enabled: redirect blocked");
-        }
-    </script>
+   
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Move Brasil - Adesão Confirmada</title>
