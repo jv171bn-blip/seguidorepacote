@@ -141,6 +141,9 @@ function showOptions(optionsId) {
 
 // Handle option click
 function handleOptionClick(button, responseText, nextAction) {
+    console.log('🎯 EVENTO: Opção selecionada');
+    console.log('📦 Payload da opção:', { responseText, nextAction });
+    
     // Add user response to chat
     addMessage(responseText, false, true);
 
@@ -172,6 +175,8 @@ function handleOptionClick(button, responseText, nextAction) {
         }
     };
 
+    console.log('📋 Configuração do produto:', productConfig);
+
     // Save selected product to localStorage if available
     if (productConfig[nextAction]) {
         localStorage.setItem('selectedProduct', JSON.stringify(productConfig[nextAction]));
@@ -181,12 +186,24 @@ function handleOptionClick(button, responseText, nextAction) {
         const value = (product.amount / 100).toFixed(2);
         const sessionKey = `initiate_checkout_${product.productHash}`;
         
+        console.log('🛒 EVENTO: Initiate Checkout');
+        console.log('📦 Payload Initiate Checkout:', {
+            currency: 'BRL',
+            value: value,
+            content_ids: [product.productHash],
+            content_name: product.productTitle,
+            content_type: 'product',
+            num_items: 1
+        });
+        
         // Check if we've already fired this event for this product in this session
         if (!sessionStorage.getItem(sessionKey)) {
             sessionStorage.setItem(sessionKey, 'true'); // Mark as fired
+            console.log('✅ Primeira vez disparando evento Initiate Checkout para este produto');
             
             // Meta Pixel InitiateCheckout event
             if (typeof window.fbq !== 'undefined') {
+                console.log('📡 Disparando Meta Pixel InitiateCheckout');
                 window.fbq('track', 'InitiateCheckout', {
                     currency: 'BRL',
                     value: value,
@@ -195,10 +212,13 @@ function handleOptionClick(button, responseText, nextAction) {
                     content_type: 'product',
                     num_items: 1
                 });
+            } else {
+                console.warn('⚠️ Meta Pixel (fbq) não está disponível');
             }
             
             // UTMify Initiate Checkout event (preserve existing)
             if (typeof window.utmify !== 'undefined') {
+                console.log('📡 Disparando UTMify Initiate Checkout');
                 window.utmify.track('Initiate Checkout', {
                     currency: 'BRL',
                     value: value,
@@ -209,10 +229,13 @@ function handleOptionClick(button, responseText, nextAction) {
                         quantity: 1
                     }]
                 });
+            } else {
+                console.warn('⚠️ UTMify não está disponível');
             }
             
             // Push to dataLayer (preserve existing)
             window.dataLayer = window.dataLayer || [];
+            console.log('📡 Disparando dataLayer initiate_checkout');
             window.dataLayer.push({
                 event: 'initiate_checkout',
                 ecommerce: {
@@ -226,6 +249,8 @@ function handleOptionClick(button, responseText, nextAction) {
                     }]
                 }
             });
+        } else {
+            console.log('⏭️ Evento Initiate Checkout já foi disparado para este produto na sessão');
         }
     }
 
@@ -332,6 +357,8 @@ const TRIBOPAY_BASE_URL = 'https://api.tribopay.com.br/api/public/v1';
 
 // PIX Modal functionality
 async function openPixModal() {
+    console.log('🎯 EVENTO: Abrir modal PIX');
+    
     // Show loading modal first
     showLoadingModal();
     
@@ -340,6 +367,10 @@ async function openPixModal() {
         const customerData = JSON.parse(localStorage.getItem('customerData') || '{}');
         const selectedProduct = JSON.parse(localStorage.getItem('selectedProduct') || '{"amount": 5748, "offerHash": "seguidores847293", "productHash": "seguidores847293", "productTitle": "Pacote de Seguidores"}');
         const params = getUrlParams();
+        
+        console.log('📋 Dados do cliente:', customerData);
+        console.log('📦 Produto selecionado:', selectedProduct);
+        console.log('🔗 Parâmetros UTM:', params);
         
         // Generate fake contact info
         const email = generateRandomEmail(customerData.nome || 'cliente');
@@ -383,6 +414,8 @@ async function openPixModal() {
             postback_url: 'https://example.com/webhook'
         };
         
+        console.log('📤 Payload da requisição TriboPay:', payload);
+        
         // Call TriboPay API
         const response = await fetch(`${TRIBOPAY_BASE_URL}/transactions?api_token=${TRIBOPAY_API_TOKEN}`, {
             method: 'POST',
@@ -395,10 +428,16 @@ async function openPixModal() {
         
         const data = await response.json();
         
+        console.log('📥 Resposta da API TriboPay:', data);
+        console.log('📊 Status da resposta:', response.ok ? 'Sucesso' : 'Erro');
+        
         if (response.ok) {
             // Save transaction hash for monitoring
             const transactionHash = data.hash;
             const pixQrCode = data.pix?.pix_qr_code;
+            
+            console.log('💳 Hash da transação:', transactionHash);
+            console.log('🔢 Código PIX:', pixQrCode);
             
             if (transactionHash && pixQrCode) {
                 localStorage.setItem('tribopayTransactionHash', transactionHash);
@@ -411,15 +450,18 @@ async function openPixModal() {
                     amount: selectedProduct.amount
                 });
             } else {
+                console.error('❌ Dados do PIX incompletos na resposta:', data);
                 closePixModal();
                 alert('Não foi possível obter os dados do PIX.');
             }
         } else {
+            console.error('❌ Erro na resposta da API TriboPay:', data);
             closePixModal();
             const errorMessage = data.message || data.error || 'Erro ao gerar PIX.';
             alert(`Erro: ${errorMessage}`);
         }
     } catch (error) {
+        console.error('💥 Erro ao chamar a API TriboPay:', error);
         closePixModal();
         alert('Erro ao conectar com a API.');
     }
@@ -620,6 +662,8 @@ function startPaymentMonitoring(gatewayId) {
         try {
             const statusUrl = `${TRIBOPAY_BASE_URL}/transactions/${gatewayId}?api_token=${TRIBOPAY_API_TOKEN}`;
             
+            console.log('🔍 Verificando status da transação...');
+            
             const response = await fetch(statusUrl, {
                 method: 'GET',
                 headers: {
@@ -630,11 +674,16 @@ function startPaymentMonitoring(gatewayId) {
             
             const statusData = await response.json();
             
+            console.log('📥 Resposta do status da transação:', statusData);
+            
             // Status está em payment_status
             const transactionStatus = statusData.payment_status;
             
+            console.log('💳 Status atual da transação:', transactionStatus);
+            
             // VERIFICA SE PAGAMENTO FOI APROVADO
             if (transactionStatus === 'paid') {
+                console.log('🎉 EVENTO: Pagamento confirmado!');
                 
                 // Para o monitoramento imediatamente
                 clearInterval(window.paymentMonitorInterval);
@@ -647,10 +696,12 @@ function startPaymentMonitoring(gatewayId) {
                 }
                 
                 // REDIRECIONAMENTO INSTANTÂNEO PARA MULTA.HTML
+                console.log('🔄 Redirecionando para aviso.html...');
                 window.location.href = buildUrlWithParams('aviso.html');
                 return;
                 
             } else if (transactionStatus === 'expired' || transactionStatus === 'canceled' || transactionStatus === 'failed') {
+                console.log('⚠️ Transação finalizada com status:', transactionStatus);
                 clearInterval(window.paymentMonitorInterval);
                 window.paymentMonitorInterval = null;
                 return;

